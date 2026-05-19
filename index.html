@@ -40,6 +40,79 @@
         .instrucoes { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin: 20px; border-left: 5px solid var(--tamandare); }
         .instrucoes h3 { margin-top: 0; color: var(--tamandare); }
         .instrucoes ol { margin-bottom: 0; }
+        
+        /* NOVO ESTILO PARA INSTRUÇÕES MAIS AMIGÁVEIS */
+        .instructions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .instruction-card {
+            background: #fefefe;
+            border-radius: 12px;
+            padding: 18px 22px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
+            transition: all 0.2s;
+        }
+        .instruction-card h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--tamandare);
+            border-left: 4px solid var(--tamandare);
+            padding-left: 12px;
+        }
+        .instruction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 15px;
+            margin-top: 5px;
+        }
+        .instruction-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px 15px;
+            border-left: 3px solid var(--tamandare);
+        }
+        .instruction-item strong {
+            color: var(--cinza-escuro);
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .instruction-item p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #2c3e50;
+        }
+        .highlight-box {
+            background: #eef2f3;
+            border-radius: 10px;
+            padding: 12px 18px;
+            margin: 15px 0 5px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #1e466e;
+        }
+        .highlight-box span {
+            font-weight: bold;
+            color: var(--tamandare);
+        }
+        .small-note {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 12px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+            padding-top: 12px;
+        }
+        
         .exec-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .card-stat { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid var(--cinza-borda); cursor: help; }
         .card-stat h4 { margin: 0; color: var(--cinza-medio); font-size: 11px; text-transform: uppercase; }
@@ -129,23 +202,44 @@
     </div>
 </div>
 
+<!-- INSTRUÇÕES REDESENHADAS -->
 <div id="instrucoes" class="instrucoes">
-    <h3>📋 Instruções para gerar o relatório no GIX</h3>
-    <ol>
-        <li><strong>Caminho:</strong> Vendas / Relatórios / Data de Emissão / Analítico por Documento</li>
-        <li>Marque “Número da loja” e “Empresa origem”, deixe em branco para todas as lojas.</li>
-        <li>Deixe <strong>Cliente, Caixa e Séries</strong> em branco.</li>
-        <li><strong>Emissão:</strong> data com abrangência mínima de <strong>6 meses</strong>.</li>
-        <li>Considerar: <strong>Apenas Vendas</strong>.</li>
-        <li>Ordem: deixe como está.</li>
-        <li>Marque: <strong>Abater devolução</strong>.</li>
-        <li>Deixe desmarcado: <strong>Listar as notas canceladas</strong>.</li>
-        <li><strong>Layout (atalho F7):</strong> marque apenas:<br>
-            Número do Documento, Código do Cliente, Nome do Cliente, Nome do Vendedor, Data da Emissão, Valor do Desconto Total, Valor Total das Notas.
-        </li>
-        <li>Exporte o CSV e carregue aqui.</li>
-    </ol>
-    <p style="font-size:12px; color:#888;">✅ Após carregar um arquivo válido, estas instruções serão substituídas pela análise.</p>
+    <h3>📋 Como gerar o relatório no GIX</h3>
+    <div class="instructions-container">
+        
+        <div class="instruction-card">
+            <h4>📍 1. Onde ir</h4>
+            <div class="instruction-grid">
+                <div class="instruction-item"><strong>📁 Caminho</strong><p>Vendas → Relatórios → Data de Emissão → Analítico por Documento</p></div>
+                <div class="instruction-item"><strong>🏢 Lojas</strong><p>Marque “Número da loja” e “Empresa origem” (deixe em branco = todas)</p></div>
+                <div class="instruction-item"><strong>📅 Período</strong><p>Data de emissão com abrangência <strong>mínima de 6 meses</strong></p></div>
+            </div>
+        </div>
+
+        <div class="instruction-card">
+            <h4>✅ 2. O que marcar (filtros obrigatórios)</h4>
+            <div class="instruction-grid">
+                <div class="instruction-item"><strong>✔️ Considerar</strong><p>Apenas Vendas</p></div>
+                <div class="instruction-item"><strong>✔️ Abater devolução</strong><p>Ativar esta opção</p></div>
+                <div class="instruction-item"><strong>❌ Listar notas canceladas</strong><p>Deixar <strong>desmarcado</strong></p></div>
+                <div class="instruction-item"><strong>🧹 Limpeza automática</strong><p>Ignoramos vendedor “VENDA ENTRE LOJAS DO GRUPO” e nomes genéricos (CONSUMIDOR, etc.)</p></div>
+            </div>
+            <div class="highlight-box">
+                <span>🔧 Campos que devem ficar EM BRANCO:</span> Cliente, Caixa, Séries, Ordem (deixar padrão)
+            </div>
+        </div>
+
+        <div class="instruction-card">
+            <h4>📄 3. O que exportar (layout F7)</h4>
+            <div class="instruction-grid">
+                <div class="instruction-item"><strong>📑 Colunas obrigatórias</strong><p>Número do Documento, Código do Cliente, Nome do Cliente, Nome do Vendedor, Data da Emissão, Valor do Desconto Total, Valor Total das Notas</p></div>
+                <div class="instruction-item"><strong>💾 Exportar CSV</strong><p>Salve o arquivo e carregue no botão “CARREGAR RELATÓRIO” acima</p></div>
+            </div>
+            <div class="small-note">
+                ✅ Após carregar um arquivo válido, estas instruções serão substituídas pela análise dos clientes.
+            </div>
+        </div>
+    </div>
 </div>
 
 <div id="modal" class="modal"><div class="modal-content" id="modalContent"></div></div>
@@ -204,7 +298,31 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
+// FUNÇÃO PARA RESETAR A INTERFACE PARA AS INSTRUÇÕES (EM CASO DE ERRO)
+function resetToInstructions() {
+    // Esconde o app, mostra instruções
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('instrucoes').style.display = 'block';
+    document.getElementById('btnSave').style.display = 'none';
+    // Limpa dados globais para evitar inconsistências
+    DB_FULL = [];
+    DB = [];
+    Persist = JSON.parse(localStorage.getItem('monitor_sazonais') || "{}");
+    // Reseta selects e inputs de filtro (opcional)
+    document.getElementById('fVendedor').innerHTML = '<option value="">Todos Vendedores</option>';
+    document.getElementById('fBusca').value = '';
+    // Reseta abas para a padrão
+    currentTab = 'top100';
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-type="top100"]').classList.add('active');
+    // Recria cabeçalho genérico (será substituído ao carregar novo arquivo)
+    gerarCabecalho();
+    render(); // render vazio
+}
+
 function showErrorModal(message) {
+    // Primeiro reseta a interface para as instruções
+    resetToInstructions();
     const modal = document.getElementById('modal');
     const modalContent = document.getElementById('modalContent');
     modal.classList.add('error-modal');
@@ -217,6 +335,7 @@ function showErrorModal(message) {
     `;
     modal.style.display = 'block';
     modal.onclick = function(e) { if(e.target === modal) modal.style.display = 'none'; };
+    showToast("Falha ao carregar: " + message, "error");
 }
 
 function truncarNome(nome, limite = 30) {
@@ -306,7 +425,6 @@ function exportarCSV(apenasSelecionados = false) {
         return;
     }
 
-    // Definir cabeçalho (primeira coluna é o código do cliente)
     let cabecalho = [
         "Código Cliente",
         "Nome Cliente",
@@ -340,13 +458,11 @@ function exportarCSV(apenasSelecionados = false) {
         ];
     });
 
-    // Montar conteúdo CSV
     let conteudo = cabecalho.join(';') + '\n';
     linhas.forEach(linha => {
         conteudo += linha.map(cel => `"${cel.replace(/"/g, '""')}"`).join(';') + '\n';
     });
 
-    // Adicionar BOM UTF-8 para compatibilidade com acentos no Excel
     const blob = new Blob(["\uFEFF" + conteudo], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -366,7 +482,6 @@ function imprimirPDF(apenasSelecionados = false) {
         return;
     }
 
-    // Ordena os dados conforme a ordenação atual da tela
     dados.sort((a,b) => {
         let col = (currentTab === 'top100' && sortCol === 'mediaH') ? 'totalHistorico' : sortCol;
         let va = a[col] ?? '', vb = b[col] ?? '';
@@ -395,7 +510,7 @@ function imprimirPDF(apenasSelecionados = false) {
     <body>
         <h1>Monitor de Clientes - Tamandaré Tintas</h1>
         <div class="sub">Relatório gerado em ${new Date().toLocaleString('pt-BR')} | Aba: ${currentTab.toUpperCase()} | Total de clientes: ${dados.length}</div>
-         <table>
+        </table>
             <thead>
                 <tr>
                     <th>Cliente</th>
@@ -438,20 +553,20 @@ function imprimirPDF(apenasSelecionados = false) {
                 <td>${c.nome}</td>
                 <td><span class="badge" style="${statusClass}">${c.status}</span></td>
                 <td><span class="trend-badge" style="${trendClass}">${c.tendenciaLabel}</span></td>
-                <td>${c.ciclo.toFixed(0)} d</td>
-                <td>R$ ${formatMoney(valorMediaOuTotal)}</td>
-                <td>R$ ${formatMoney(c.vJanelaAnt)}</td>
-                <td>R$ ${formatMoney(c.vJanela)}</td>
-                <td>${varDisplay}</td>
-                <td>R$ ${formatMoney(c.ultimos30d)}</td>
-                <td>${getPrimeirosDoisNomes(c.vendedor)}</td>
+                <td>${c.ciclo.toFixed(0)} d</span></td>
+                <td>R$ ${formatMoney(valorMediaOuTotal)}</span></td>
+                <td>R$ ${formatMoney(c.vJanelaAnt)}</span></td>
+                <td>R$ ${formatMoney(c.vJanela)}</span></td>
+                <td>${varDisplay}</span></td>
+                <td>R$ ${formatMoney(c.ultimos30d)}</span></td>
+                <td>${getPrimeirosDoisNomes(c.vendedor)}</span></td>
             </tr>
         `;
     });
 
     html += `
             </tbody>
-         </table>
+        </table>
         <div class="footer">Sistema de Monitoramento de Carteira - Ciclo Dinâmico | Tendência Inteligente</div>
     </body>
     </html>
@@ -517,11 +632,9 @@ function gerarCabecalho() {
         <th onclick="ordenar('ultimos30d')" title="Soma simples das compras nos últimos 30 dias corridos (referência humana).">Últimos 30d</th>
         <th onclick="ordenar('vendedor')" title="Responsável pela conta (apenas dois primeiros nomes).">Vendedor</th>
     `;
-    html += '</tr>';
+    html += '</table>';
     thead.innerHTML = html;
 }
-
-function atualizarCabecalhoCheckbox() { /* não precisa mais, pois o cabeçalho é gerado dinamicamente */ }
 
 // ======================= SELEÇÃO DE LINHAS =======================
 function toggleSelecao() {
@@ -547,29 +660,17 @@ function getLinhasSelecionadas() {
 
 // ======================= FUNÇÃO PARA DETERMINAR VENDEDOR PRINCIPAL =======================
 function definirVendedorPrincipal(comprasDoCliente, agoraTimestamp) {
-    // comprasDoCliente: array de objetos com { data, valor, vendedor }
-    // agoraTimestamp: timestamp da data máxima do sistema (hoje)
     if (!comprasDoCliente || comprasDoCliente.length === 0) return '';
-
     const noventaDiasAtras = agoraTimestamp - 90 * 86400000;
     const comprasRecentes = comprasDoCliente.filter(c => c.data >= noventaDiasAtras);
-
-    let baseCompras = comprasRecentes;
-    if (baseCompras.length === 0) {
-        baseCompras = comprasDoCliente; // fallback para todo o histórico
-    }
-
-    // Agrupa por vendedor: contagem de transações
+    let baseCompras = comprasRecentes.length > 0 ? comprasRecentes : comprasDoCliente;
     const freq = {};
     for (const compra of baseCompras) {
         const v = compra.vendedor;
         if (!v) continue;
         freq[v] = (freq[v] || 0) + 1;
     }
-
     if (Object.keys(freq).length === 0) return '';
-
-    // Encontra o vendedor com maior frequência (moda)
     let vendedorPrincipal = null;
     let maxFreq = -1;
     for (const [v, qtd] of Object.entries(freq)) {
@@ -611,7 +712,7 @@ function processarRaw(rows) {
 
         if (!clientesMap.has(codigo)) {
             clientesMap.set(codigo, {
-                cod: codigo, nome, vendedor: null, // será definido posteriormente
+                cod: codigo, nome, vendedor: null,
                 compras: [], total: 0, totalDesc: 0
             });
         }
@@ -645,7 +746,6 @@ function processarRaw(rows) {
         }
         if (mesesUnicos.size < 2) continue;
 
-        // ---- DEFINE O VENDEDOR PRINCIPAL (moda últimos 90 dias) ----
         cli.vendedor = definirVendedorPrincipal(cli.compras, hoje);
 
         cli.compras.sort((a,b) => a.data - b.data);
@@ -837,14 +937,14 @@ function render() {
                 <td><b title="${escapeHtml(c.nome)}">${escapeHtml(nomeTruncado)}</b></td>
                 <td><span class="badge" style="background:${statusClass}" title="${escapeHtml(c.motivo)}">${c.status}</span></td>
                 <td><span class="trend-badge ${trendClass}">${c.tendenciaLabel}</span></td>
-                <td>${c.ciclo.toFixed(0)} d</td>
-                <td>R$ ${formatMoney(valorMediaOuTotal)}</td>
-                <td>R$ ${formatMoney(c.vJanelaAnt)}</td>
-                <td>R$ ${formatMoney(c.vJanela)}</td>
-                <td style="color:${corVar}">${varDisplay}</td>
-                <td>R$ ${formatMoney(c.ultimos30d)}</td>
-                <td>${escapeHtml(vendedorAbreviado)}</td>
-             </tr>
+                <td>${c.ciclo.toFixed(0)} d</span></td>
+                <td>R$ ${formatMoney(valorMediaOuTotal)}</span></td>
+                <td>R$ ${formatMoney(c.vJanelaAnt)}</span></td>
+                <td>R$ ${formatMoney(c.vJanela)}</span></td>
+                <td style="color:${corVar}">${varDisplay}</span></td>
+                <td>R$ ${formatMoney(c.ultimos30d)}</span></td>
+                <td>${escapeHtml(vendedorAbreviado)}</span></td>
+            </tr>
         `;
     }).join('');
 
@@ -1053,6 +1153,9 @@ tableContainer.addEventListener('mousemove', (e) => {
     tableContainer.scrollLeft = scrollLeft - walk;
 });
 tableContainer.style.cursor = 'grab';
+
+// Inicialmente reset para garantir estado limpo (instruções visíveis)
+resetToInstructions();
 </script>
 </body>
 </html>
