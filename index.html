@@ -395,7 +395,7 @@ function imprimirPDF(apenasSelecionados = false) {
     <body>
         <h1>Monitor de Clientes - Tamandaré Tintas</h1>
         <div class="sub">Relatório gerado em ${new Date().toLocaleString('pt-BR')} | Aba: ${currentTab.toUpperCase()} | Total de clientes: ${dados.length}</div>
-        <table>
+         <table>
             <thead>
                 <tr>
                     <th>Cliente</th>
@@ -451,7 +451,7 @@ function imprimirPDF(apenasSelecionados = false) {
 
     html += `
             </tbody>
-        </table>
+         </table>
         <div class="footer">Sistema de Monitoramento de Carteira - Ciclo Dinâmico | Tendência Inteligente</div>
     </body>
     </html>
@@ -517,7 +517,7 @@ function gerarCabecalho() {
         <th onclick="ordenar('ultimos30d')" title="Soma simples das compras nos últimos 30 dias corridos (referência humana).">Últimos 30d</th>
         <th onclick="ordenar('vendedor')" title="Responsável pela conta (apenas dois primeiros nomes).">Vendedor</th>
     `;
-    html += '<tr>';
+    html += '</tr>';
     thead.innerHTML = html;
 }
 
@@ -543,6 +543,42 @@ function getLinhasSelecionadas() {
         if (cod) selecionados.push(cod);
     });
     return selecionados;
+}
+
+// ======================= FUNÇÃO PARA DETERMINAR VENDEDOR PRINCIPAL =======================
+function definirVendedorPrincipal(comprasDoCliente, agoraTimestamp) {
+    // comprasDoCliente: array de objetos com { data, valor, vendedor }
+    // agoraTimestamp: timestamp da data máxima do sistema (hoje)
+    if (!comprasDoCliente || comprasDoCliente.length === 0) return '';
+
+    const noventaDiasAtras = agoraTimestamp - 90 * 86400000;
+    const comprasRecentes = comprasDoCliente.filter(c => c.data >= noventaDiasAtras);
+
+    let baseCompras = comprasRecentes;
+    if (baseCompras.length === 0) {
+        baseCompras = comprasDoCliente; // fallback para todo o histórico
+    }
+
+    // Agrupa por vendedor: contagem de transações
+    const freq = {};
+    for (const compra of baseCompras) {
+        const v = compra.vendedor;
+        if (!v) continue;
+        freq[v] = (freq[v] || 0) + 1;
+    }
+
+    if (Object.keys(freq).length === 0) return '';
+
+    // Encontra o vendedor com maior frequência (moda)
+    let vendedorPrincipal = null;
+    let maxFreq = -1;
+    for (const [v, qtd] of Object.entries(freq)) {
+        if (qtd > maxFreq) {
+            maxFreq = qtd;
+            vendedorPrincipal = v;
+        }
+    }
+    return vendedorPrincipal || '';
 }
 
 // ======================= PROCESSAMENTO PRINCIPAL =======================
@@ -575,12 +611,12 @@ function processarRaw(rows) {
 
         if (!clientesMap.has(codigo)) {
             clientesMap.set(codigo, {
-                cod: codigo, nome, vendedor,
+                cod: codigo, nome, vendedor: null, // será definido posteriormente
                 compras: [], total: 0, totalDesc: 0
             });
         }
         const cli = clientesMap.get(codigo);
-        cli.compras.push({ data: data.getTime(), valor: valorTotal, desconto: valorDesc });
+        cli.compras.push({ data: data.getTime(), valor: valorTotal, desconto: valorDesc, vendedor: vendedor });
         cli.total += valorTotal;
         cli.totalDesc += valorDesc;
     });
@@ -608,6 +644,9 @@ function processarRaw(rows) {
             mesesUnicos.add(`${d.getFullYear()}-${d.getMonth()}`);
         }
         if (mesesUnicos.size < 2) continue;
+
+        // ---- DEFINE O VENDEDOR PRINCIPAL (moda últimos 90 dias) ----
+        cli.vendedor = definirVendedorPrincipal(cli.compras, hoje);
 
         cli.compras.sort((a,b) => a.data - b.data);
         const intervalos = [];
@@ -805,7 +844,7 @@ function render() {
                 <td style="color:${corVar}">${varDisplay}</td>
                 <td>R$ ${formatMoney(c.ultimos30d)}</td>
                 <td>${escapeHtml(vendedorAbreviado)}</td>
-            </tr>
+             </tr>
         `;
     }).join('');
 
