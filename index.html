@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex">
+    <title>Monitor de Clientes - Ciclo Dinâmico</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        :root {
+            --tamandare: #BA2025;
+            --cinza-escuro: #2D2D2D;
+            --cinza-medio: #666666;
+            --cinza-borda: #DEDEDE;
+            --cinza-fundo: #F4F7F6;
+            --cinza-topo: #E4E8E6;
+            --critico: #BA2025;
+            --risco: #e67e22;
+            --atencao: #f1c40f;
+            --saudavel: #27ae60;
+            --perdido: #7f8c8d;
+            --sazonal: #555555;
+            --crescendo: #1abc9c;
+            --desacelerando: #e67e22;
+            --forte-queda: #c0392b;
+            --inativo: #95a5a6;
+        }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--cinza-fundo); margin: 0; }
+        .top-bar { background: var(--cinza-topo); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--tamandare); position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 10px; }
+        .logo-area { display: flex; align-items: center; gap: 15px; }
+        .btn-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .btn { padding: 10px 18px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-upload { background: var(--tamandare); color: white; position: relative; overflow: hidden; }
+        .btn-upload:hover { background: #96191d; }
+        .btn-upload input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; width: 100%; }
+        .btn-save { background: #2c3e50; color: white; }
+        .btn-save:hover { background: #1a252f; }
+        .btn-legend { background: #555; color: white; }
+        .btn-legend:hover { background: #333; }
+        .container { padding: 20px; max-width: 1450px; margin: auto; }
+        .instrucoes { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin: 20px; border-left: 5px solid var(--tamandare); }
+        .instrucoes h3 { margin-top: 0; color: var(--tamandare); }
+        .instrucoes ol { margin-bottom: 0; }
+        .exec-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card-stat { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid var(--cinza-borda); cursor: help; }
+        .card-stat h4 { margin: 0; color: var(--cinza-medio); font-size: 11px; text-transform: uppercase; }
+        .card-stat p { margin: 10px 0 0; font-size: 20px; font-weight: bold; color: var(--tamandare); }
+        .filter-bar { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .tab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .tab-nav { display: flex; gap: 5px; flex-wrap: wrap; }
+        .tab { padding: 12px 25px; cursor: pointer; background: #E0E0E0; border-radius: 8px 8px 0 0; font-weight: bold; font-size: 12px; text-transform: uppercase; color: var(--cinza-medio); transition: 0.2s; }
+        .tab.active { background: white; color: var(--tamandare); border-top: 3px solid var(--tamandare); }
+        .legend-btn { margin-left: auto; }
+        .tab-desc { background: white; padding: 10px 20px; border-left: 4px solid var(--tamandare); font-size: 13px; color: var(--cinza-medio); margin-bottom: 15px; }
+        .content-area { background: white; border-radius: 0 8px 8px 8px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow-x: auto; cursor: grab; }
+        .content-area:active { cursor: grabbing; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; background: #f8f9fa; padding: 12px; font-size: 11px; cursor: pointer; border-bottom: 2px solid var(--cinza-borda); white-space: nowrap; text-transform: uppercase; color: var(--cinza-medio); }
+        th:hover { background: #EAEAEA; color: var(--cinza-escuro); }
+        td { padding: 10px; border-bottom: 1px solid #f0f0f0; font-size: 13px; white-space: nowrap; }
+        tr:hover { background: #fafafa; cursor: default; }
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 10px; color: white; font-weight: bold; text-transform: uppercase; display: inline-block; cursor: help; }
+        .trend-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; display: inline-block; }
+        .trend-up { background: rgba(26,188,156,0.15); color: #1abc9c; }
+        .trend-stable { background: rgba(102,102,102,0.15); color: #555; }
+        .trend-down { background: rgba(230,126,34,0.15); color: #e67e22; }
+        .trend-strong-down { background: rgba(192,57,43,0.15); color: #c0392b; }
+        .trend-inactive { background: rgba(149,165,166,0.15); color: #7f8c8d; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); }
+        .modal-content { background: white; margin: 3% auto; padding: 25px; width: 70%; border-radius: 8px; max-height: 85vh; overflow-y: auto; }
+        .small-modal .modal-content { max-width: 400px; text-align: center; }
+        .error-modal .modal-content { max-width: 500px; text-align: center; border-top: 5px solid var(--tamandare); }
+        .modal-options { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .modal-options button { padding: 12px; font-size: 14px; cursor: pointer; background: #f0f0f0; border: none; border-radius: 6px; transition: 0.2s; }
+        .modal-options button:hover { background: var(--tamandare); color: white; }
+        .toast { position: fixed; bottom: 30px; right: 30px; background: #2c3e50; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 2000; font-size: 14px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        .toast.show { opacity: 1; }
+        .toast.success { background: #27ae60; }
+        .toast.error { background: #c0392b; }
+        .toast.info { background: #2980b9; }
+        .toast.warning { background: #e67e22; }
+        @media print {
+            .no-print, .top-bar, .filter-bar, .tab-nav, .tab-desc, .btn-save, .btn-upload, .exec-summary, .modal, .toast, .instrucoes, .legend-btn { display: none !important; }
+            body, .container, .content-area, table { background: white; margin: 0; padding: 0; }
+            th { background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .badge, .trend-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            a { text-decoration: none; color: black; }
+            table { width: 100%; border-collapse: collapse; }
+            td, th { border: 1px solid #ddd; padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="logo-area">
+        <img src="logo.png" alt="Logo" style="height: 40px;" onerror="this.style.display='none'">
+        <div><h2 style="margin:0;">Monitor de Clientes</h2><small>Ciclo Dinâmico | Tendência Inteligente</small></div>
+    </div>
+    <div class="btn-group">
+        <button onclick="abrirModalExportar()" id="btnSave" class="btn btn-save" style="display:none;">💾 Salvar / Exportar</button>
+        <div class="btn btn-upload">CARREGAR RELATÓRIO<input type="file" id="csvInput" accept=".csv, .txt"></div>
+    </div>
+</div>
+
+<div class="container" id="app" style="display:none;">
+    <div class="exec-summary" id="summaryCards"></div>
+    <div class="filter-bar">
+        <select id="fVendedor"><option value="">Todos Vendedores</option></select>
+        <input type="text" id="fBusca" placeholder="Pesquisar nome ou código..." style="padding:8px; width:300px;">
+        <button onclick="toggleSelecao()" class="btn" style="background:#ccc;">☑️ Selecionar Linhas</button>
+    </div>
+    <div class="tab-header">
+        <div class="tab-nav">
+            <div class="tab active" data-type="top100">Top 100 (Histórico)</div>
+            <div class="tab" data-type="alerta">Alertas</div>
+            <div class="tab" data-type="queda">Em Queda</div>
+            <div class="tab" data-type="crescimento">Em Crescimento</div>
+            <div class="tab" data-type="perdido">Perdidos</div>
+            <div class="tab" data-type="sazonal">Sazonais</div>
+        </div>
+        <button class="btn btn-legend legend-btn" onclick="showLegendModal()">📖 Legenda</button>
+    </div>
+    <div id="tabDesc" class="tab-desc"></div>
+    <div class="content-area" id="tableContainer">
+        <table id="mainTable">
+            <thead id="tableHeader"></thead>
+            <tbody id="mainBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="instrucoes" class="instrucoes">
+    <h3>📋 Instruções para gerar o relatório no GIX</h3>
+    <ol>
+        <li><strong>Caminho:</strong> Vendas / Relatórios / Data de Emissão / Analítico por Documento</li>
+        <li>Marque “Número da loja” e “Empresa origem”, deixe em branco para todas as lojas.</li>
+        <li>Deixe <strong>Cliente, Caixa e Séries</strong> em branco.</li>
+        <li><strong>Emissão:</strong> data com abrangência mínima de <strong>6 meses</strong>.</li>
+        <li>Considerar: <strong>Apenas Vendas</strong>.</li>
+        <li>Ordem: deixe como está.</li>
+        <li>Marque: <strong>Abater devolução</strong>.</li>
+        <li>Deixe desmarcado: <strong>Listar as notas canceladas</strong>.</li>
+        <li><strong>Layout (atalho F7):</strong> marque apenas:<br>
+            Número do Documento, Código do Cliente, Nome do Cliente, Nome do Vendedor, Data da Emissão, Valor do Desconto Total, Valor Total das Notas.
+        </li>
+        <li>Exporte o CSV e carregue aqui.</li>
+    </ol>
+    <p style="font-size:12px; color:#888;">✅ Após carregar um arquivo válido, estas instruções serão substituídas pela análise.</p>
+</div>
+
+<div id="modal" class="modal"><div class="modal-content" id="modalContent"></div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+// ======================= FUNÇÕES AUXILIARES =======================
+function parseMoneyBR(valorStr) {
+    if (!valorStr || valorStr === "") return 0;
+    let limpo = valorStr.trim().replace(',', '.');
+    let num = parseFloat(limpo);
+    return isNaN(num) ? 0 : num;
+}
+
+function parseDataBr(dataStr) {
+    if (!dataStr || typeof dataStr !== 'string') return null;
+    const partes = dataStr.split('/');
+    if (partes.length !== 3) return null;
+    const dia = parseInt(partes[0], 10);
+    const mes = parseInt(partes[1], 10) - 1;
+    const ano = parseInt(partes[2], 10);
+    if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return null;
+    return new Date(ano, mes, dia);
+}
+
+function mediana(arr) {
+    if (!arr.length) return 0;
+    const sorted = [...arr].sort((a,b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid-1] + sorted[mid]) / 2;
+}
+
+function getPrimeirosDoisNomes(nomeCompleto) {
+    if (!nomeCompleto) return '';
+    const partes = nomeCompleto.trim().split(/\s+/);
+    if (partes.length === 1) return partes[0];
+    return partes[0] + ' ' + partes[1];
+}
+
+function formatMoney(valor) {
+    if (valor === undefined || valor === null) valor = 0;
+    let numero = Number(valor);
+    if (isNaN(numero)) numero = 0;
+    let comDuasCasas = numero.toFixed(2);
+    let partes = comDuasCasas.split('.');
+    let parteInteira = partes[0];
+    let parteDecimal = partes[1];
+    parteInteira = parteInteira.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return `${parteInteira},${parteDecimal}`;
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = `toast ${type} show`;
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function showErrorModal(message) {
+    const modal = document.getElementById('modal');
+    const modalContent = document.getElementById('modalContent');
+    modal.classList.add('error-modal');
+    modalContent.innerHTML = `
+        <div style="text-align:center;">
+            <h2 style="color:var(--tamandare);">⚠️ Erro no arquivo</h2>
+            <p style="font-size:16px; margin:20px 0;">${message}</p>
+            <button onclick="document.getElementById('modal').style.display='none'">Fechar</button>
+        </div>
+    `;
+    modal.style.display = 'block';
+    modal.onclick = function(e) { if(e.target === modal) modal.style.display = 'none'; };
+}
+
+function truncarNome(nome, limite = 30) {
+    if (nome.length <= limite) return nome;
+    return nome.substring(0, limite) + '…';
+}
+
+// ======================= LEGENDA =======================
+function showLegendModal() {
+    const modalContent = document.getElementById('modalContent');
+    const modal = document.getElementById('modal');
+    modal.classList.remove('error-modal');
+    modal.classList.remove('small-modal');
+    modalContent.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <h2 style="color:var(--tamandare);">📖 Legenda - Glossário de Fórmulas e Critérios</h2>
+            <button onclick="document.getElementById('modal').style.display='none'" style="cursor:pointer; padding:6px 15px; background:#EEE; border:none; border-radius:4px;">X Fechar</button>
+        </div>
+        <hr>
+        <h3>📊 Limpeza e Filtragem dos Dados</h3>
+        <ul>
+            <li><strong>Ignorados:</strong> Vendedor "VENDA ENTRE LOJAS DO GRUPO", nomes curtos (≤10 caracteres), palavras como "CONSUMIDOR", "CLIENTE NÃO IDENTIFICADO", "INDETERMINADO".</li>
+            <li><strong>Compra válida:</strong> Valor total ou desconto > 0. Notas canceladas são desconsideradas (configuração do relatório).</li>
+            <li><strong>Clientes analisados:</strong> Mínimo de 3 compras em pelo menos 2 meses diferentes e média histórica mensal ≥ R$ 1.000.</li>
+        </ul>
+        <h3>📈 Cálculo do Ciclo de Compra</h3>
+        <p>Mediana dos intervalos entre todas as compras do cliente (em dias). Mínimo fixado em 7 dias para evitar ciclos irreais. Ex: cliente com intervalos [15, 18, 22] → mediana = 18 dias.</p>
+        <h3>⏱️ Janelas de Análise</h3>
+        <ul>
+            <li><strong>Janela Dinâmica (Atual):</strong> tamanho = min(120, max(30, ciclo × 2)). Ex: ciclo 20d → janela = 40d; ciclo 80d → janela = 120d.</li>
+            <li><strong>Janela Anterior:</strong> mesma duração, imediatamente anterior à janela atual.</li>
+            <li><strong>Últimos 30 dias:</strong> soma simples dos últimos 30 dias corridos (referência humana).</li>
+        </ul>
+        <h3>📉 Tendência e Variação</h3>
+        <p>Variação = (Janela Atual - Janela Anterior) / Janela Anterior × 100 (limitada entre -100% e +300%).</p>
+        <ul>
+            <li><strong>↑ Crescendo:</strong> variação ≥ +20%</li>
+            <li><strong>→ Estável:</strong> variação entre -20% e +20% (exclusive)</li>
+            <li><strong>↓ Desacelerando:</strong> variação entre -40% e -20%</li>
+            <li><strong>↓↓ Forte queda:</strong> variação < -40%</li>
+            <li><strong>Inativo:</strong> cliente classificado como "Perdido" (ver abaixo).</li>
+        </ul>
+        <h3>⚠️ Status de Saúde do Cliente</h3>
+        <ul>
+            <li><strong>Saudável:</strong> fluxo normal, sem atrasos ou quedas significativas.</li>
+            <li><strong>Atenção:</strong> atraso leve (dias sem compra > ciclo + 10) ou queda > 20%.</li>
+            <li><strong>Risco:</strong> atraso > 10 dias além do ciclo, ou queda > 35%.</li>
+            <li><strong>Crítico:</strong> atraso > 20 dias além do ciclo E queda > 40%.</li>
+            <li><strong>Perdido:</strong> dias sem compra > 3,5 × ciclo (mínimo 60 dias). Ex: ciclo 30d → perdido após 105 dias.</li>
+            <li><strong>Sazonal:</strong> cliente marcado manualmente pelo usuário (ignora regras automáticas).</li>
+        </ul>
+        <h3>🧮 Score Interno (de 0 a 100, aproximado)</h3>
+        <p>Score = min(60, (atraso / ciclo)*40) + (tendência × 15) + min(10, compras × 0,3) + min(15, (médiaHistórica / 10000)*10)</p>
+        <p>Quanto maior o score, pior a situação (maior risco).</p>
+        <h3>📌 Aba "Top 100"</h3>
+        <p>Coluna "Total Acumulado" = soma de todas as compras do cliente no período carregado (não é média).</p>
+        <h3>✍️ Observações e Sazonalidade</h3>
+        <p>Você pode marcar um cliente como "Sazonal" (ex: obras, sazonalidade). Ele será removido das alertas e aparecerá na aba específica. Se houver faturamento no mês corrente, a marcação é removida automaticamente.</p>
+    `;
+    modal.style.display = 'block';
+}
+
+// ======================= EXPORTAÇÃO CSV E PDF =======================
+function getDadosExportar(apenasSelecionados = false) {
+    const vend = document.getElementById('fVendedor').value;
+    const busca = document.getElementById('fBusca').value.toUpperCase();
+    let base = (currentTab === 'alerta') ? DB : (currentTab === 'top100' ? DB_FULL.slice(0,100) : DB_FULL);
+    let dados = base.filter(c => (!vend || c.vendedor === vend) && (!busca || c.nome.toUpperCase().includes(busca) || c.cod.includes(busca)));
+
+    if (currentTab === 'alerta') dados = dados.filter(c => ['Atenção','Risco','Crítico'].includes(c.status));
+    else if (currentTab === 'queda') dados = dados.filter(c => c.emQueda && c.status !== 'Sazonal');
+    else if (currentTab === 'crescimento') dados = dados.filter(c => c.emCrescimento);
+    else if (currentTab === 'perdido') dados = dados.filter(c => c.status === 'Perdido');
+    else if (currentTab === 'sazonal') dados = dados.filter(c => c.status === 'Sazonal');
+
+    if (apenasSelecionados) {
+        const selecionados = getLinhasSelecionadas();
+        dados = dados.filter(c => selecionados.includes(c.cod));
+    }
+    return dados;
+}
+
+function exportarCSV(apenasSelecionados = false) {
+    const dados = getDadosExportar(apenasSelecionados);
+    if (dados.length === 0) {
+        showToast("Nenhum dado para exportar.", "warning");
+        return;
+    }
+
+    // Definir cabeçalho (primeira coluna é o código do cliente)
+    let cabecalho = [
+        "Código Cliente",
+        "Nome Cliente",
+        "Saúde",
+        "Tendência",
+        "Ciclo (dias)",
+        currentTab === 'top100' ? "Total Acumulado" : "Média Histórica",
+        "Janela Anterior",
+        "Janela Atual",
+        "Evolução (%)",
+        "Últimos 30d",
+        "Vendedor"
+    ];
+
+    let linhas = dados.map(c => {
+        let valorMediaOuTotal = (currentTab === 'top100') ? c.totalHistorico : c.mediaH;
+        let sinalVar = c.variacao > 0 ? '+' : '';
+        let varDisplay = (c.variacao === 0) ? '0%' : `${sinalVar}${c.variacao.toFixed(2)}%`;
+        return [
+            c.cod,
+            c.nome,
+            c.status,
+            c.tendenciaLabel,
+            c.ciclo.toFixed(0),
+            formatMoney(valorMediaOuTotal),
+            formatMoney(c.vJanelaAnt),
+            formatMoney(c.vJanela),
+            varDisplay,
+            formatMoney(c.ultimos30d),
+            getPrimeirosDoisNomes(c.vendedor)
+        ];
+    });
+
+    // Montar conteúdo CSV
+    let conteudo = cabecalho.join(';') + '\n';
+    linhas.forEach(linha => {
+        conteudo += linha.map(cel => `"${cel.replace(/"/g, '""')}"`).join(';') + '\n';
+    });
+
+    // Adicionar BOM UTF-8 para compatibilidade com acentos no Excel
+    const blob = new Blob(["\uFEFF" + conteudo], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute("download", `clientes_${currentTab}_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`CSV exportado com ${dados.length} clientes.`, "success");
+}
+
+function imprimirPDF(apenasSelecionados = false) {
+    const dados = getDadosExportar(apenasSelecionados);
+    if (dados.length === 0) {
+        showToast("Nenhum dado para imprimir.", "warning");
+        return;
+    }
+
+    // Ordena os dados conforme a ordenação atual da tela
+    dados.sort((a,b) => {
+        let col = (currentTab === 'top100' && sortCol === 'mediaH') ? 'totalHistorico' : sortCol;
+        let va = a[col] ?? '', vb = b[col] ?? '';
+        if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+        return sortAsc ? va - vb : vb - va;
+    });
+
+    let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Relatório de Clientes - Tamandaré</title>
+        <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; }
+            h1 { color: #BA2025; font-size: 18px; margin-bottom: 5px; }
+            .sub { color: #555; font-size: 12px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th { background: #eee; padding: 10px; text-align: left; font-size: 10px; text-transform: uppercase; border-bottom: 2px solid #ddd; }
+            td { padding: 8px; border-bottom: 1px solid #eee; font-size: 11px; }
+            .badge { padding: 3px 8px; border-radius: 12px; color: white; font-weight: bold; display: inline-block; font-size: 9px; }
+            .trend-badge { padding: 3px 8px; border-radius: 12px; font-weight: bold; display: inline-block; font-size: 9px; }
+            .footer { margin-top: 20px; font-size: 10px; color: #888; text-align: center; }
+        </style>
+    </head>
+    <body>
+        <h1>Monitor de Clientes - Tamandaré Tintas</h1>
+        <div class="sub">Relatório gerado em ${new Date().toLocaleString('pt-BR')} | Aba: ${currentTab.toUpperCase()} | Total de clientes: ${dados.length}</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Saúde</th>
+                    <th>Tendência</th>
+                    <th>Ciclo (dias)</th>
+                    <th>${currentTab === 'top100' ? 'Total Acumulado' : 'Média Histórica'}</th>
+                    <th>Janela Anterior</th>
+                    <th>Janela Atual</th>
+                    <th>Evolução</th>
+                    <th>Últimos 30d</th>
+                    <th>Vendedor</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    dados.forEach(c => {
+        let statusClass = '';
+        if (c.status === 'Crítico') statusClass = 'background:#BA2025;';
+        else if (c.status === 'Risco') statusClass = 'background:#e67e22;';
+        else if (c.status === 'Atenção') statusClass = 'background:#f1c40f; color:#333;';
+        else if (c.status === 'Saudável') statusClass = 'background:#27ae60;';
+        else if (c.status === 'Perdido') statusClass = 'background:#7f8c8d;';
+        else if (c.status === 'Sazonal') statusClass = 'background:#555555;';
+        
+        let trendClass = '';
+        if (c.tendenciaLabel === '↑ Crescendo') trendClass = 'color:#1abc9c;';
+        else if (c.tendenciaLabel === '→ Estável') trendClass = 'color:#555;';
+        else if (c.tendenciaLabel === '↓ Desacelerando') trendClass = 'color:#e67e22;';
+        else if (c.tendenciaLabel === '↓↓ Forte queda') trendClass = 'color:#c0392b;';
+        else if (c.tendenciaLabel === 'Inativo') trendClass = 'color:#7f8c8d;';
+        
+        let sinalVar = c.variacao > 0 ? '+' : '';
+        let varDisplay = (c.variacao === 0) ? '0%' : `${sinalVar}${c.variacao.toFixed(0)}%`;
+        let valorMediaOuTotal = (currentTab === 'top100') ? c.totalHistorico : c.mediaH;
+        
+        html += `
+            <tr>
+                <td>${c.nome}</td>
+                <td><span class="badge" style="${statusClass}">${c.status}</span></td>
+                <td><span class="trend-badge" style="${trendClass}">${c.tendenciaLabel}</span></td>
+                <td>${c.ciclo.toFixed(0)} d</td>
+                <td>R$ ${formatMoney(valorMediaOuTotal)}</td>
+                <td>R$ ${formatMoney(c.vJanelaAnt)}</td>
+                <td>R$ ${formatMoney(c.vJanela)}</td>
+                <td>${varDisplay}</td>
+                <td>R$ ${formatMoney(c.ultimos30d)}</td>
+                <td>${getPrimeirosDoisNomes(c.vendedor)}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+        <div class="footer">Sistema de Monitoramento de Carteira - Ciclo Dinâmico | Tendência Inteligente</div>
+    </body>
+    </html>
+    `;
+
+    const win = window.open();
+    win.document.write(html);
+    win.document.close();
+    win.print();
+}
+
+function abrirModalExportar() {
+    const temSelecionados = getLinhasSelecionadas().length > 0;
+    const modalContent = document.getElementById('modalContent');
+    const modal = document.getElementById('modal');
+    modal.classList.remove('error-modal');
+    modal.classList.add('small-modal');
+    modalContent.innerHTML = `
+        <div style="text-align:center;">
+            <h3>📄 Opções de Exportação</h3>
+            <div class="modal-options">
+                <button onclick="fecharModal(); exportarCSV(false)">📊 CSV - Todos os clientes (aba atual)</button>
+                ${temSelecionados ? '<button onclick="fecharModal(); exportarCSV(true)">📊 CSV - Apenas selecionados</button>' : ''}
+                <button onclick="fecharModal(); imprimirPDF(false)">🖨️ PDF - Todos os clientes (aba atual)</button>
+                ${temSelecionados ? '<button onclick="fecharModal(); imprimirPDF(true)">🖨️ PDF - Apenas selecionados</button>' : ''}
+                <button onclick="fecharModal()" style="background:#ccc;">Cancelar</button>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'block';
+}
+
+function fecharModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+
+// ======================= VARIÁVEIS GLOBAIS =======================
+let DB_FULL = [];
+let DB = [];
+let sortCol = 'totalHistorico';
+let sortAsc = false;
+let currentTab = 'top100';
+let Persist = JSON.parse(localStorage.getItem('monitor_sazonais') || "{}");
+let selecaoAtiva = false;
+
+// ======================= CABEÇALHO DINÂMICO =======================
+function gerarCabecalho() {
+    const mediaOuTotal = (currentTab === 'top100') ? 'Total Acumulado' : 'Média Histórica';
+    const thead = document.getElementById('tableHeader');
+    let html = '<tr>';
+    if (selecaoAtiva) {
+        html += '<th style="width:30px; cursor: default;"><input type="checkbox" id="selectAllCheckbox" onchange="selecionarTodos(this.checked)"></th>';
+    }
+    html += `
+        <th onclick="ordenar('nome')" title="Nome do cliente cadastrado.">Cliente</th>
+        <th onclick="ordenar('status')" title="Classificação de risco baseada em atraso, queda e relevância.">Saúde</th>
+        <th onclick="ordenar('tendenciaPeso')" title="Direção do comportamento: ↑ Crescendo (≥20%%), → Estável (entre -20%% e +20%%), ↓ Desacelerando (entre -21%% e -40%%), ↓↓ Forte queda (< -40%%).">Tendência</th>
+        <th onclick="ordenar('ciclo')" title="Mediana dos intervalos entre compras (mínimo 7 dias). Ex: 15d=recorrente, 60d=espaçado, 120d=obra/sazonal.">Ciclo (dias)</th>
+        <th onclick="ordenar(currentTab === 'top100' ? 'totalHistorico' : 'mediaH')" title="${currentTab === 'top100' ? 'Soma de todas as compras no período carregado.' : 'Média mensal dos últimos 6 meses (excluindo janela atual).'}">${mediaOuTotal}</th>
+        <th onclick="ordenar('vJanelaAnt')" title="Faturamento na janela imediatamente anterior (mesmo tamanho).">Janela Anterior</th>
+        <th onclick="ordenar('vJanela')" title="Faturamento na janela dinâmica de tamanho = min(120, max(30, ciclo×2)) dias anteriores à data atual.">Janela Atual</th>
+        <th onclick="ordenar('variacao')" title="Variação percentual da Janela Atual comparada à Janela Anterior. Limitada a -100%% a +300%%.">Evolução</th>
+        <th onclick="ordenar('ultimos30d')" title="Soma simples das compras nos últimos 30 dias corridos (referência humana).">Últimos 30d</th>
+        <th onclick="ordenar('vendedor')" title="Responsável pela conta (apenas dois primeiros nomes).">Vendedor</th>
+    `;
+    html += '<tr>';
+    thead.innerHTML = html;
+}
+
+function atualizarCabecalhoCheckbox() { /* não precisa mais, pois o cabeçalho é gerado dinamicamente */ }
+
+// ======================= SELEÇÃO DE LINHAS =======================
+function toggleSelecao() {
+    selecaoAtiva = !selecaoAtiva;
+    gerarCabecalho();
+    render();
+    if (selecaoAtiva) showToast("Modo de seleção ativado. Marque as linhas desejadas.", "info");
+    else showToast("Modo de seleção desativado.", "info");
+}
+
+function selecionarTodos(checked) {
+    document.querySelectorAll('.row-selector').forEach(cb => cb.checked = checked);
+}
+
+function getLinhasSelecionadas() {
+    const selecionados = [];
+    document.querySelectorAll('.row-selector:checked').forEach(cb => {
+        const cod = cb.getAttribute('data-cod');
+        if (cod) selecionados.push(cod);
+    });
+    return selecionados;
+}
+
+// ======================= PROCESSAMENTO PRINCIPAL =======================
+function processarRaw(rows) {
+    const ignoredVend = 'VENDA ENTRE LOJAS DO GRUPO';
+    const ignoredClients = ['CONSUMIDOR', 'CLIENTE NÃO IDENTIFICADO', 'INDETERMINADO'];
+    const clientesMap = new Map();
+    let dataMax = new Date(0);
+
+    rows.forEach(row => {
+        const dataStr = (row[0] || "").trim();
+        const codigo = (row[2] || "").trim();
+        const nome = (row[3] || "").trim();
+        const vendedor = (row[4] || "").trim();
+        const valorDescStr = (row[5] || "").trim();
+        const valorTotalStr = (row[6] || "").trim();
+
+        if (!codigo || !nome || !vendedor) return;
+        if (vendedor.toUpperCase() === ignoredVend) return;
+        if (nome.length <= 10) return;
+        if (ignoredClients.some(ign => nome.toUpperCase().includes(ign))) return;
+
+        const data = parseDataBr(dataStr);
+        if (!data) return;
+        if (data > dataMax) dataMax = data;
+
+        const valorTotal = parseMoneyBR(valorTotalStr);
+        const valorDesc = parseMoneyBR(valorDescStr);
+        if (valorTotal === 0 && valorDesc === 0) return;
+
+        if (!clientesMap.has(codigo)) {
+            clientesMap.set(codigo, {
+                cod: codigo, nome, vendedor,
+                compras: [], total: 0, totalDesc: 0
+            });
+        }
+        const cli = clientesMap.get(codigo);
+        cli.compras.push({ data: data.getTime(), valor: valorTotal, desconto: valorDesc });
+        cli.total += valorTotal;
+        cli.totalDesc += valorDesc;
+    });
+
+    console.log(`Clientes brutos: ${clientesMap.size}`);
+    if (clientesMap.size === 0) {
+        showErrorModal("Arquivo CSV inválido, leia as instruções na tela Inicial.");
+        return;
+    }
+
+    const hoje = dataMax.getTime();
+    const seisMesesAtras = hoje - 180 * 86400000;
+    const dataHoje = new Date(hoje);
+    const mesCorrente = dataHoje.getMonth();
+    const anoCorrente = dataHoje.getFullYear();
+
+    const analiseFinal = [];
+
+    for (let cli of clientesMap.values()) {
+        if (cli.compras.length < 3) continue;
+
+        const mesesUnicos = new Set();
+        for (let comp of cli.compras) {
+            const d = new Date(comp.data);
+            mesesUnicos.add(`${d.getFullYear()}-${d.getMonth()}`);
+        }
+        if (mesesUnicos.size < 2) continue;
+
+        cli.compras.sort((a,b) => a.data - b.data);
+        const intervalos = [];
+        for (let i = 1; i < cli.compras.length; i++) {
+            intervalos.push((cli.compras[i].data - cli.compras[i-1].data) / 86400000);
+        }
+        let ciclo = mediana(intervalos);
+        if (ciclo === 0) ciclo = 30;
+        ciclo = Math.max(7, ciclo);
+
+        const janelaDias = Math.min(120, Math.max(30, ciclo * 2));
+        const fimJanelaAtual = hoje;
+        const inicioJanelaAtual = fimJanelaAtual - janelaDias * 86400000;
+        const fimJanelaAnterior = inicioJanelaAtual;
+        const inicioJanelaAnterior = fimJanelaAnterior - janelaDias * 86400000;
+
+        const vJanela = cli.compras.filter(c => c.data >= inicioJanelaAtual).reduce((s,c) => s + c.valor, 0);
+        const vJanelaAnt = cli.compras.filter(c => c.data >= inicioJanelaAnterior && c.data < fimJanelaAnterior).reduce((s,c) => s + c.valor, 0);
+        const ultimos30d = cli.compras.filter(c => c.data >= (hoje - 30 * 86400000)).reduce((s,c) => s + c.valor, 0);
+        const faturamentoMes = cli.compras.filter(c => {
+            const d = new Date(c.data);
+            return d.getMonth() === mesCorrente && d.getFullYear() === anoCorrente;
+        }).reduce((s,c) => s + c.valor, 0);
+
+        const comprasHist = cli.compras.filter(c => c.data < inicioJanelaAtual && c.data >= seisMesesAtras);
+        const somaHist = comprasHist.reduce((s,c) => s + c.valor, 0);
+        const mesesAtivos = new Set(comprasHist.map(c => {
+            const d = new Date(c.data);
+            return `${d.getUTCFullYear()}-${d.getUTCMonth()}`;
+        })).size || 1;
+        const mediaH = somaHist / mesesAtivos;
+
+        if (mediaH < 1000) continue;
+
+        let tendenciaLabel = "→ Estável";
+        let tendenciaPeso = 0;
+        let variacao = 0;
+        if (vJanelaAnt === 0 && vJanela > 0) {
+            tendenciaLabel = "↑ Crescendo";
+            tendenciaPeso = 2;
+            variacao = 100;
+        } else if (vJanelaAnt === 0 && vJanela === 0) {
+            tendenciaLabel = "→ Estável";
+            tendenciaPeso = 0;
+            variacao = 0;
+        } else {
+            variacao = ((vJanela - vJanelaAnt) / vJanelaAnt) * 100;
+            variacao = Math.max(-100, Math.min(variacao, 300));
+            if (variacao >= 20) { tendenciaLabel = "↑ Crescendo"; tendenciaPeso = 2; }
+            else if (variacao >= -20) { tendenciaLabel = "→ Estável"; tendenciaPeso = 0; }
+            else if (variacao >= -40) { tendenciaLabel = "↓ Desacelerando"; tendenciaPeso = -1; }
+            else { tendenciaLabel = "↓↓ Forte queda"; tendenciaPeso = -2; }
+        }
+
+        const ultimaCompra = cli.compras[cli.compras.length-1].data;
+        const diasSemCompra = Math.floor((hoje - ultimaCompra) / 86400000);
+        const atraso = Math.max(0, (diasSemCompra - ciclo) - 10);
+        const isPerdido = diasSemCompra > Math.max(ciclo * 3.5, 60);
+        const queda = (variacao < 0) ? Math.abs(variacao) : 0;
+
+        const isSazonal = Persist[cli.cod] && Persist[cli.cod].isSazonal === true;
+        if (faturamentoMes > 0 && isSazonal) {
+            Persist[cli.cod].isSazonal = false;
+            delete Persist[cli.cod].ultimaReativacao;
+            localStorage.setItem('monitor_sazonais', JSON.stringify(Persist));
+        }
+
+        let status, motivo;
+        if (isSazonal) { status = "Sazonal"; motivo = "Arquivado manualmente"; }
+        else if (isPerdido) { status = "Perdido"; motivo = `Sem compras há ${diasSemCompra} dias (> ${Math.max(ciclo * 3.5, 60).toFixed(0)} dias limite)`; }
+        else if (atraso > 20 && queda > 40) { status = "Crítico"; motivo = "Forte atraso + queda"; }
+        else if (atraso > 10 || queda > 35) { status = "Risco"; motivo = "Comportamento preocupante"; }
+        else if (atraso > 0 || queda > 20) { status = "Atenção"; motivo = "Oscilação recente"; }
+        else { status = "Saudável"; motivo = "Fluxo normal"; }
+
+        if (status === "Perdido") {
+            tendenciaLabel = "Inativo";
+            tendenciaPeso = -3;
+            variacao = 0;
+        }
+
+        const sAtraso = Math.min(60, (atraso / ciclo) * 40);
+        const sTendencia = tendenciaPeso * 15;
+        const sRec = Math.min(10, cli.compras.length * 0.3);
+        const sRel = Math.min(15, (mediaH / 10000) * 10);
+        let score = sAtraso + sTendencia + sRec + sRel;
+        if (score < 0) score = 0;
+
+        const emCrescimento = (tendenciaPeso >= 2);
+        const emQueda = (tendenciaPeso <= -1);
+
+        analiseFinal.push({
+            ...cli,
+            ciclo,
+            atraso,
+            diasSemCompra,
+            variacao,
+            queda,
+            tendenciaLabel,
+            tendenciaPeso,
+            vJanela,
+            vJanelaAnt,
+            ultimos30d,
+            mediaH,
+            faturamentoMes,
+            status,
+            motivo,
+            score,
+            emCrescimento,
+            emQueda,
+            descMedio: cli.total > 0 ? (cli.totalDesc / (cli.total + cli.totalDesc)) * 100 : 0,
+            totalHistorico: cli.total
+        });
+    }
+
+    console.log(`Clientes relevantes: ${analiseFinal.length}`);
+    if (analiseFinal.length === 0) {
+        showErrorModal("Arquivo CSV inválido, leia as instruções na tela Inicial.");
+        return;
+    }
+
+    analiseFinal.sort((a,b) => b.totalHistorico - a.totalHistorico);
+    DB_FULL = analiseFinal;
+    DB = DB_FULL.slice(0, 100);
+
+    localStorage.setItem('monitor_sazonais', JSON.stringify(Persist));
+    popularVendedores();
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('instrucoes').style.display = 'none';
+    document.getElementById('btnSave').style.display = 'inline-block';
+    render();
+    showToast(`Carregado! ${DB_FULL.length} clientes relevantes.`, "success");
+}
+
+// ======================= RENDERIZAÇÃO =======================
+function render() {
+    const vend = document.getElementById('fVendedor').value;
+    const busca = document.getElementById('fBusca').value.toUpperCase();
+    let base = (currentTab === 'alerta') ? DB : (currentTab === 'top100' ? DB_FULL.slice(0,100) : DB_FULL);
+    let dados = base.filter(c => (!vend || c.vendedor === vend) && (!busca || c.nome.toUpperCase().includes(busca) || c.cod.includes(busca)));
+
+    if (currentTab === 'alerta') dados = dados.filter(c => ['Atenção','Risco','Crítico'].includes(c.status));
+    else if (currentTab === 'queda') dados = dados.filter(c => c.emQueda && c.status !== 'Sazonal');
+    else if (currentTab === 'crescimento') dados = dados.filter(c => c.emCrescimento);
+    else if (currentTab === 'perdido') dados = dados.filter(c => c.status === 'Perdido');
+    else if (currentTab === 'sazonal') dados = dados.filter(c => c.status === 'Sazonal');
+
+    dados.sort((a,b) => {
+        let col = (currentTab === 'top100' && sortCol === 'mediaH') ? 'totalHistorico' : sortCol;
+        let va = a[col] ?? '', vb = b[col] ?? '';
+        if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+        return sortAsc ? va - vb : vb - va;
+    });
+
+    const tbody = document.getElementById('mainBody');
+    tbody.innerHTML = dados.map(c => {
+        let statusClass = '';
+        if (c.status === 'Crítico') statusClass = 'var(--critico)';
+        else if (c.status === 'Risco') statusClass = 'var(--risco)';
+        else if (c.status === 'Atenção') statusClass = 'var(--atencao)';
+        else if (c.status === 'Saudável') statusClass = 'var(--saudavel)';
+        else if (c.status === 'Perdido') statusClass = 'var(--perdido)';
+        else if (c.status === 'Sazonal') statusClass = 'var(--sazonal)';
+
+        let trendClass = '';
+        if (c.tendenciaLabel === '↑ Crescendo') trendClass = 'trend-up';
+        else if (c.tendenciaLabel === '→ Estável') trendClass = 'trend-stable';
+        else if (c.tendenciaLabel === '↓ Desacelerando') trendClass = 'trend-down';
+        else if (c.tendenciaLabel === '↓↓ Forte queda') trendClass = 'trend-strong-down';
+        else if (c.tendenciaLabel === 'Inativo') trendClass = 'trend-inactive';
+
+        let sinalVar = c.variacao > 0 ? '+' : '';
+        let corVar = c.variacao > 0 ? 'var(--saudavel)' : (c.variacao < 0 ? 'var(--tamandare)' : 'var(--cinza-medio)');
+        let varDisplay = (c.variacao === 0) ? '0%' : `${sinalVar}${c.variacao.toFixed(0)}%`;
+
+        const vendedorAbreviado = getPrimeirosDoisNomes(c.vendedor);
+        const nomeTruncado = truncarNome(c.nome, 30);
+        let valorMediaOuTotal = (currentTab === 'top100') ? c.totalHistorico : c.mediaH;
+
+        let checkboxCell = '';
+        if (selecaoAtiva) {
+            checkboxCell = `<td style="text-align:center;"><input type="checkbox" class="row-selector" data-cod="${c.cod}"></td>`;
+        }
+
+        return `
+            <tr ondblclick="showModal('${c.cod}')" style="${selecaoAtiva ? 'cursor: default;' : 'cursor: pointer;'}">
+                ${checkboxCell}
+                <td><b title="${escapeHtml(c.nome)}">${escapeHtml(nomeTruncado)}</b></td>
+                <td><span class="badge" style="background:${statusClass}" title="${escapeHtml(c.motivo)}">${c.status}</span></td>
+                <td><span class="trend-badge ${trendClass}">${c.tendenciaLabel}</span></td>
+                <td>${c.ciclo.toFixed(0)} d</td>
+                <td>R$ ${formatMoney(valorMediaOuTotal)}</td>
+                <td>R$ ${formatMoney(c.vJanelaAnt)}</td>
+                <td>R$ ${formatMoney(c.vJanela)}</td>
+                <td style="color:${corVar}">${varDisplay}</td>
+                <td>R$ ${formatMoney(c.ultimos30d)}</td>
+                <td>${escapeHtml(vendedorAbreviado)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const s = {
+        tot: dados.length,
+        criticos: dados.filter(x => x.status === 'Crítico').length,
+        risco: dados.filter(x => x.status === 'Risco').length,
+        receitaRisco: dados.filter(x => x.status === 'Crítico' || x.status === 'Risco').reduce((a,b) => a + b.mediaH, 0)
+    };
+    document.getElementById('summaryCards').innerHTML = `
+        <div class="card-stat"><h4>Visualizando</h4><p>${s.tot}</p></div>
+        <div class="card-stat" style="border-top-color:var(--critico)"><h4>Críticos</h4><p>${s.criticos}</p></div>
+        <div class="card-stat" style="border-top-color:var(--risco)"><h4>Em Risco</h4><p>${s.risco}</p></div>
+        <div class="card-stat"><h4>Receita em Risco</h4><p>R$ ${formatMoney(s.receitaRisco)}</p></div>
+    `;
+}
+
+// ======================= MODAL (detalhes do cliente) =======================
+function showModal(cod) {
+    const c = DB_FULL.find(x => x.cod === cod);
+    if (!c) return;
+    const p = Persist[c.cod] || { isSazonal: false, obs: "" };
+    const hist = {};
+    [...c.compras].sort((a,b) => b.data - a.data).forEach(comp => {
+        const d = new Date(comp.data);
+        const chave = `${d.getUTCFullYear()}-${(d.getUTCMonth()+1).toString().padStart(2,'0')}`;
+        const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+        if (!hist[chave]) hist[chave] = { label, total: 0 };
+        hist[chave].total += comp.valor;
+    });
+    const modalContent = document.getElementById('modalContent');
+    const modal = document.getElementById('modal');
+    modal.classList.remove('error-modal');
+    modal.classList.remove('small-modal');
+    modalContent.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <h2 style="color:var(--tamandare);">${escapeHtml(c.nome)} <span style="font-size:14px;">(#${c.cod})</span></h2>
+            <button onclick="document.getElementById('modal').style.display='none'" style="cursor:pointer; padding:6px 15px; background:#EEE; border:none; border-radius:4px;">X Fechar</button>
+        </div>
+        <hr>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:25px;">
+            <div>
+                <p><b>Vendedor:</b> ${escapeHtml(c.vendedor)}</p>
+                <p><b>Faturamento Histórico:</b> R$ ${formatMoney(c.total)}</p>
+                <p><b>Ticket Médio:</b> R$ ${formatMoney(c.total / c.compras.length)}</p>
+                <p><b>Desconto Médio:</b> <span style="color:var(--tamandare);">${c.descMedio.toFixed(2)}%</span></p>
+                <p><b>Ciclo de Compra:</b> ${c.ciclo.toFixed(1)} dias</p>
+                <p><b>Dias sem compra:</b> ${c.diasSemCompra} dias</p>
+                <p><b>Score Interno:</b> ${c.score.toFixed(1)}</p>
+                <div style="background:#f9f9f9; padding:15px; border-radius:8px; margin-top:20px;">
+                    <label><b>OBSERVAÇÕES (máx 30 caracteres):</b></label>
+                    <input type="text" id="obsInput" maxlength="30" value="${escapeHtml(p.obs)}" placeholder="Ex: Obra finalizada" onblur="salvarObs('${c.cod}', this.value)" style="width:100%; margin-top:5px; padding:8px;">
+                    <button onclick="toggleSazonal('${c.cod}')" style="margin-top:15px; width:100%; padding:10px; font-weight:bold; border:none; border-radius:4px; cursor:pointer; color:white; background: ${p.isSazonal ? 'var(--cinza-medio)' : 'var(--sazonal)'}">
+                        ${p.isSazonal ? '✔ RETIRAR DA SAZONALIDADE' : '⚑ MARCAR COMO SAZONAL / OBRA'}
+                    </button>
+                </div>
+            </div>
+            <div style="background:var(--cinza-fundo); padding:15px; border-radius:8px;">
+                <h4>Histórico Mensal</h4>
+                <div style="max-height:280px; overflow-y:auto;">
+                    ${Object.keys(hist).sort().reverse().map(k => `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #ddd;"><span>${hist[k].label}</span><b>R$ ${formatMoney(hist[k].total)}</b></div>`).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'block';
+}
+
+function salvarObs(cod, val) {
+    if (!Persist[cod]) Persist[cod] = { isSazonal: false, obs: "" };
+    Persist[cod].obs = val;
+    localStorage.setItem('monitor_sazonais', JSON.stringify(Persist));
+    showToast("Observação salva.", "success");
+}
+
+function toggleSazonal(cod) {
+    const c = DB_FULL.find(x => x.cod === cod);
+    if (!c) return;
+    if (!Persist[cod]) Persist[cod] = { isSazonal: false, obs: "" };
+    Persist[cod].isSazonal = !Persist[cod].isSazonal;
+    if (!Persist[cod].isSazonal) delete Persist[cod].ultimaReativacao;
+    localStorage.setItem('monitor_sazonais', JSON.stringify(Persist));
+
+    const isSazonal = Persist[cod].isSazonal;
+    const isPerdido = c.diasSemCompra > Math.max(c.ciclo * 3.5, 60);
+    let novoStatus, novoMotivo;
+    if (isSazonal) { novoStatus = "Sazonal"; novoMotivo = "Arquivado manualmente"; }
+    else if (isPerdido) { novoStatus = "Perdido"; novoMotivo = `Sem compras há ${c.diasSemCompra} dias (> ${Math.max(c.ciclo * 3.5, 60).toFixed(0)} dias limite)`; }
+    else if (c.atraso > 20 && c.queda > 40) { novoStatus = "Crítico"; novoMotivo = "Forte atraso + queda"; }
+    else if (c.atraso > 10 || c.queda > 35) { novoStatus = "Risco"; novoMotivo = "Comportamento preocupante"; }
+    else if (c.atraso > 0 || c.queda > 20) { novoStatus = "Atenção"; novoMotivo = "Oscilação recente"; }
+    else { novoStatus = "Saudável"; novoMotivo = "Fluxo normal"; }
+    c.status = novoStatus;
+    c.motivo = novoMotivo;
+    const cTop = DB.find(x => x.cod === cod);
+    if (cTop) { cTop.status = c.status; cTop.motivo = c.motivo; }
+    document.getElementById('modal').style.display = 'none';
+    render();
+}
+
+function popularVendedores() {
+    const vends = [...new Set(DB_FULL.map(x => x.vendedor))].sort();
+    const sel = document.getElementById('fVendedor');
+    sel.innerHTML = '<option value="">Todos Vendedores</option>';
+    vends.forEach(v => sel.innerHTML += `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`);
+}
+
+function ordenar(col) {
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = false; }
+    render();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
+}
+
+// ======================= LEITURA DO CSV =======================
+document.getElementById('csvInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+        const texto = evt.target.result;
+        const linhas = texto.split(/\r?\n/);
+        if (linhas.length < 2) {
+            showErrorModal("Arquivo CSV inválido, leia as instruções na tela Inicial.");
+            return;
+        }
+
+        let sep = ';';
+        if (linhas[0].includes(',')) {
+            const countComma = (linhas[0].match(/,/g) || []).length;
+            const countSemi = (linhas[0].match(/;/g) || []).length;
+            if (countComma > countSemi) sep = ',';
+        }
+
+        const dados = [];
+        for (let i = 1; i < linhas.length; i++) {
+            const linha = linhas[i].trim();
+            if (!linha) continue;
+            const cols = linha.split(sep);
+            while (cols.length < 7) cols.push("");
+            dados.push(cols.slice(0,7));
+        }
+
+        if (dados.length === 0) {
+            showErrorModal("Arquivo CSV inválido, leia as instruções na tela Inicial.");
+            return;
+        }
+
+        processarRaw(dados);
+    };
+    reader.readAsText(file, "UTF-8");
+});
+
+// ======================= EVENTOS E INICIALIZAÇÃO =======================
+document.getElementById('fVendedor').addEventListener('change', render);
+document.getElementById('fBusca').addEventListener('input', render);
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', e => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        currentTab = e.currentTarget.dataset.type;
+        const desc = {
+            top100: "Os 100 maiores clientes por faturamento total histórico. Coluna 'Total Acumulado' representa todo o faturamento do cliente no período carregado.",
+            alerta: "Top 100 em situação de Atenção, Risco ou Crítico.",
+            queda: "Clientes com tendência de Desaceleração ou Forte Queda.",
+            crescimento: "Clientes com tendência de Crescimento.",
+            perdido: "Clientes classificados como Perdidos: ausência de compras por mais de 3,5 vezes o ciclo de compra (mínimo 60 dias). Exemplo: ciclo de 30 dias → perdido após 105 dias sem compra.",
+            sazonal: "Clientes marcados manualmente como Sazonais."
+        };
+        document.getElementById('tabDesc').innerHTML = `<b>${currentTab.toUpperCase()}:</b> ${desc[currentTab]}`;
+        gerarCabecalho();
+        render();
+    });
+});
+gerarCabecalho();
+
+// Arrastar tabela
+const tableContainer = document.getElementById('tableContainer');
+let isDown = false;
+let startX;
+let scrollLeft;
+
+tableContainer.addEventListener('mousedown', (e) => {
+    isDown = true;
+    startX = e.pageX - tableContainer.offsetLeft;
+    scrollLeft = tableContainer.scrollLeft;
+    tableContainer.style.cursor = 'grabbing';
+});
+tableContainer.addEventListener('mouseleave', () => {
+    isDown = false;
+    tableContainer.style.cursor = 'grab';
+});
+tableContainer.addEventListener('mouseup', () => {
+    isDown = false;
+    tableContainer.style.cursor = 'grab';
+});
+tableContainer.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - tableContainer.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    tableContainer.scrollLeft = scrollLeft - walk;
+});
+tableContainer.style.cursor = 'grab';
+</script>
+</body>
+</html>
